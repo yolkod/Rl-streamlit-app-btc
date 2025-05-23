@@ -10,9 +10,13 @@ from sklearn.metrics import accuracy_score
 
 st.title("Previsão de Alta ou Baixa - BTC (Machine Learning)")
 
-# Coleta de dados
+# Coleta de dados com verificação
 df = yf.download("BTC-USD", period="90d", interval="1h")
-df.dropna(inplace=True)
+
+if df.empty or len(df) < 50:
+    st.error("Erro ao obter dados do BTC. Tente novamente mais tarde.")
+    st.stop()
+
 df['RSI'] = RSIIndicator(df['Close']).rsi()
 df['EMA'] = EMAIndicator(df['Close'], window=14).ema_indicator()
 
