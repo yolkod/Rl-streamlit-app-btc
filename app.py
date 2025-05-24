@@ -13,55 +13,46 @@ st.title("Previsão de Alta ou Baixa - BTC (Machine Learning)")
 # Coleta de dados
 df = yf.download("BTC-USD", period="90d", interval="1h")
 
-if df.empty or len(df) < 50:
-    st.error("Erro ao obter dados do BTC. Tente novamente mais tarde.")
+# Corrigir MultiIndex nas colunas
+if isinstance(df.columns, pd.MultiIndex):
+    df.columns = df.columns.get_level_values(0)
+
+# Verificar se dados são válidos
+if df.empty or 'Close' not in df.columns or df['Close'].notna().sum() < 15:
+    st.error("Erro ao obter dados válidos do BTC. Tente novamente mais tarde.")
     st.stop()
 
-# Debug - mostrar colunas e tipos para entender melhor o dataframe
-st.write(f"Colunas do df: {df.columns}")
-st.write(f"Tipo de df['Close']: {type(df['Close'])}")
-st.write(f"Total de valores não nulos em df['Close']: {df['Close'].notna().sum()}")
-
-# Verificar existência e quantidade de dados válidos na coluna 'Close'
-if 'Close' in df.columns:
-    count_notna = df['Close'].notna().sum()
-    if count_notna > 14:
-        rsi = RSIIndicator(close=df['Close'], window=14)
-        df['RSI'] = rsi.rsi()
-    else:
-        df['RSI'] = np.nan
-else:
-    df['RSI'] = np.nan
-
-# Calcular EMA
+# Cálculo dos indicadores técnicos
+rsi = RSIIndicator(close=df['Close'], window=14)
+df['RSI'] = rsi.rsi()
 df['EMA'] = EMAIndicator(df['Close'], window=14).ema_indicator()
 
-# Preparar variável target para ML
+# Variável alvo (target)
 df['Target'] = (df['Close'].shift(-1) > df['Close']).astype(int)
-df.dropna(inplace=True)  # Remove linhas com NaN
+df.dropna(inplace=True)
 
-# Selecionar features e target
+# Features e target
 features = ['Close', 'RSI', 'EMA']
 X = df[features]
 y = df['Target']
 
-# Dividir dados treino/teste (sem embaralhar)
+# Divisão dos dados
 X_train, X_test, y_train, y_test = train_test_split(X, y, shuffle=False, test_size=0.2)
 
-# Treinar modelo RandomForest
+# Treinamento do modelo
 model = RandomForestClassifier(n_estimators=100, random_state=42)
 model.fit(X_train, y_train)
 
-# Avaliar acurácia
+# Acurácia
 y_pred = model.predict(X_test)
 acc = accuracy_score(y_test, y_pred)
 
-# Previsão do próximo movimento
+# Previsão futura
 latest = df[features].iloc[[-1]]
 future_pred = model.predict(latest)[0]
 msg = "O modelo prevê: **ALTA**" if future_pred == 1 else "O modelo prevê: **BAIXA**"
 
-# Mostrar resultados no Streamlit
+# Exibição
 st.write("Acurácia do modelo:", f"{acc * 100:.2f}%")
 st.write(msg)
 st.line_chart(df['Close'])
