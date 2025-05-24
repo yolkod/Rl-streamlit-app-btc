@@ -1,5 +1,0 @@
-streamlit
-yfinance
-ta
-pandas
-scikit-learn
