@@ -17,7 +17,14 @@ if df.empty or len(df) < 50:
     st.error("Erro ao obter dados do BTC. Tente novamente mais tarde.")
     st.stop()
 
-df['RSI'] = RSIIndicator(df['Close']).rsi()
+from ta.momentum import RSIIndicator
+
+# Verifica se a coluna 'Close' tem dados válidos
+if 'Close' in df.columns and df['Close'].notna().sum() > 14:
+    rsi = RSIIndicator(close=df['Close'], window=14)
+    df['RSI'] = rsi.rsi()
+else:
+    df['RSI'] = np.nan
 df['EMA'] = EMAIndicator(df['Close'], window=14).ema_indicator()
 
 # Preparar variáveis
